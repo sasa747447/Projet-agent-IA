@@ -6,11 +6,13 @@ from google import genai
 INSTRUCTION_IA = """
 Tu es un assistant IA personnel agissant comme un agent d'automatisation web (Playwright).
 Voici les règles EXTRÊMEMENT IMPORTANTES à suivre à la lettre :
-- Tu dois TOUJOURS commencer par donner un lien à ouvrir avec la commande 'lien' mais tu ne dois rien mettre ensuite apres la commande lien.
+- Pour ton TOUT PREMIER message, tu dois UNIQUEMENT renvoyer la commande 'lien' avec l'URL (ex: lien+https://www.google.com). INTERDICTION absolue de mettre un symbole '|' ou d'autres commandes au premier tour.
+- Pour les tours suivants (après avoir vu le scan), utilise les autres commandes.
 - Utilise le symbole '+' pour séparer la commande et CHAQUE argument (ex: commande+arg1+arg2).
 - Utilise EXCLUSIVEMENT le symbole '|' pour séparer plusieurs instructions consécutives.
 - N'utilise JAMAIS de caractères jokers ou d'étoiles '*'.
 - Ne réponds QUE par la suite de commandes. Aucun texte explicatif, aucune intro, aucune politesse.
+- Éléments introuvables : Si un élément n'est pas dans le scan, n'invente rien. Exécute les actions visibles (pop-ups, menus) et attends le prochain tour où il apparaîtra.
 
 SYNTAXES STRICTEMENT AUTORISÉES (N'en invente AUCUNE autre) :
   • lien + <url_complete>
@@ -100,17 +102,19 @@ def complement_boucle():
 def scan_environement(page):
     return page.evaluate("""() => {
         let info = [];
-        document.querySelectorAll('button, a, input, textarea, [role="button"]').forEach(el => {
+        // On cible les éléments interactifs ET les balises de texte (p, h1-h6, span, div textuels)
+        document.querySelectorAll('button, a, input, textarea, [role="button"], p, h1, h2, h3, h4, h5, h6').forEach(el => {
             if (el.offsetParent !== null) {
                 let tag = el.tagName.toLowerCase();
                 if (tag === 'button') tag = 'btn';
                 else if (tag === 'input') tag = 'in';
                 else if (tag === 'textarea') tag = 'txt';
                 else if (tag === 'a') tag = 'lnk';
+                else if (tag.startsWith('h')) tag = 'hdr';
                 
-                let texte = (el.innerText || el.value || el.placeholder || '').trim().substring(0, 20);
+                let texte = (el.innerText || el.value || el.placeholder || '').trim().substring(0, 40);
                 let id = el.id ? `#${el.id}` : '';
-                let classe = el.className ? `.${el.className.split(' ').join('.')}` : '';
+                let classe = el.className && typeof el.className === 'string' ? `.${el.className.split(' ').join('.')}` : '';
                 
                 if (texte || el.id || el.className) {
                     info.push(`[${tag}] "${texte}" ${id} ${classe}`.trim());
@@ -131,6 +135,30 @@ def executer_commande(chaine_ia):
         print("Aucune instruction à exécuter.")
         return
 
+def executer_commande(chaine_ia):
+    if not chaine_ia or chaine_ia.strip() == "":
+        print("Aucune instruction à exécuter.")
+        return
+
+    commande_separes = chaine_ia.split('|')
+
+    for commande_separe in commande_separes:
+        commande_separe = commande_separe.strip()
+        if not commande_separe:
+            continue
+
+        parties = commande_separe.split('+')
+        commande = parties[0].strip()
+
+        if commande == "lien":
+            if len(parties) > 1:
+                url = parties[1].strip()
+                page.goto(url)
+
+        if commande == "btn_class_id":
+            if len(parties) > 1:
+                page.click(parties[1].strip())
+
 terminer_ia = False
 
 while not terminer:
@@ -144,7 +172,7 @@ while not terminer:
         print("Fermeture du programme...")
         break
 
-    rps_ia_ouverture_site = chat.send_message(f"C'est votre premier fois. Demande utilisateur : {rps_utilisateur}")
+    rps_ia_ouverture_site = chat.send_message(f"C'est la première fois. Demande utilisateur : {rps_utilisateur}. Rappelle-toi : donne UNIQUEMENT la commande lien+URL, rien d'autre.")
     print(f"Page ouvert : {rps_ia_ouverture_site.text}")
 
     with sync_playwright() as p:
@@ -155,5 +183,12 @@ while not terminer:
         while not terminer_ia:
             page.wait_for_load_state("networkidle")
             resultat_scan = scan_environement(page)
-            print(resultat_scan)
+            print(resultat_scan + "\n")
+
+            rps_scan_ia = chat.send_message("Scan complet : " + resultat_scan + ". Demande utilisateur" + rps_utilisateur)
+            print(rps_scan_ia.text)
+
+            executer_commande(rps_scan_ia.text)
+
+            print("Cliquer sur une touche pour continuer")
             msvcrt.getch()
