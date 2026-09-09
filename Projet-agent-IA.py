@@ -97,8 +97,28 @@ def complement_boucle():
             break
         time.sleep(0.1)
 
-def scan_environement(page_a_scanner):
-    pass
+def scan_environement(page):
+    return page.evaluate("""() => {
+        let info = [];
+        document.querySelectorAll('button, a, input, textarea, [role="button"]').forEach(el => {
+            if (el.offsetParent !== null) {
+                let tag = el.tagName.toLowerCase();
+                if (tag === 'button') tag = 'btn';
+                else if (tag === 'input') tag = 'in';
+                else if (tag === 'textarea') tag = 'txt';
+                else if (tag === 'a') tag = 'lnk';
+                
+                let texte = (el.innerText || el.value || el.placeholder || '').trim().substring(0, 20);
+                let id = el.id ? `#${el.id}` : '';
+                let classe = el.className ? `.${el.className.split(' ').join('.')}` : '';
+                
+                if (texte || el.id || el.className) {
+                    info.push(`[${tag}] "${texte}" ${id} ${classe}`.trim());
+                }
+            }
+        });
+        return info.join('\\n');
+    }""")
 
 def ouvrire_site(chaine_ia):
     if chaine_ia.strip().startswith('lien+'):
@@ -124,7 +144,7 @@ while not terminer:
         print("Fermeture du programme...")
         break
 
-    rps_ia_ouverture_site = chat.send_message(f"C'est votre premier fois vous devez d'abord donner un site a ouvrire. Demande utilisateur : {rps_utilisateur}")
+    rps_ia_ouverture_site = chat.send_message(f"C'est votre premier fois. Demande utilisateur : {rps_utilisateur}")
     print(f"Page ouvert : {rps_ia_ouverture_site.text}")
 
     with sync_playwright() as p:
@@ -132,4 +152,8 @@ while not terminer:
         page = browser.new_page()
         ouvrire_site(rps_ia_ouverture_site.text)
 
-        complement_boucle()
+        while not terminer_ia:
+            page.wait_for_load_state("networkidle")
+            resultat_scan = scan_environement(page)
+            print(resultat_scan)
+            msvcrt.getch()
