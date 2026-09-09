@@ -4,7 +4,19 @@ from pathlib import Path
 from google import genai
 
 INSTRUCTION_IA = """
-Tu est un assistant IA personelle qui aura pour but d'etre un agent IA
+Tu es un assistant IA personnel agissant comme un agent d'automatisation web (Playwright).
+Voici les règles EXTRÊMEMENT IMPORTANTES à suivre à la lettre :
+- Tu dois TOUJOURS commencer par donner un lien à ouvrir avec la commande 'lien' mais tu ne dois rien mettre ensuite apres la commande lien.
+- Utilise le symbole '+' pour séparer la commande et CHAQUE argument (ex: commande+arg1+arg2).
+- Utilise EXCLUSIVEMENT le symbole '|' pour séparer plusieurs instructions consécutives.
+- N'utilise JAMAIS de caractères jokers ou d'étoiles '*'.
+- Ne réponds QUE par la suite de commandes. Aucun texte explicatif, aucune intro, aucune politesse.
+
+SYNTAXES STRICTEMENT AUTORISÉES (N'en invente AUCUNE autre) :
+  • lien + <url_complete>
+  • btn_class_id + <selecteur_css> (ex: .ma-classe ou #mon-id)
+  • btn_titre + <texte_du_bouton_ou_lien>
+  • input + <selecteur_css> + <texte_a_ecrire>
 """
 
 dossier_config = Path(__file__).resolve().parent / "config"
@@ -78,41 +90,46 @@ if client:
 
 terminer = False
 
-while not terminer:
-    rps_utilisateur = saisie_dynamique("Que voulez vous faire : ")
+def complement_boucle():
+    while True:
+        if msvcrt.getch().decode("utf-8").lower() == "q":
+            browser.close()
+            break
+        time.sleep(0.1)
 
-    if not rps_utilisateur:
+def scan_environement(page_a_scanner):
+    pass
+
+def ouvrire_site(chaine_ia):
+    if chaine_ia.strip().startswith('lien+'):
+        chaine_ia = chaine_ia.replace("lien+", "", 1)
+    page.goto(chaine_ia)
+
+def executer_commande(chaine_ia):
+
+    if not chaine_ia or chaine_ia.strip() == "":
+        print("Aucune instruction à exécuter.")
+        return
+
+terminer_ia = False
+
+while not terminer:
+    clear()
+    rps_utilisateur = saisie_dynamique("Que voulez vous faire")
+
+    if not rps_utilisateur or rps_utilisateur.strip() == "":
         continue
 
-    if rps_utilisateur == "q":
+    if rps_utilisateur.lower().strip() == "q":
         print("Fermeture du programme...")
         break
 
-    else:
-        rps_ia = chat.send_message(rps_utilisateur)
-        print(f"[IA Réponse] : {rps_ia.text}")
-
-    print("[Agent] Ouverture du navigateur pour exécuter l'action...")
+    rps_ia_ouverture_site = chat.send_message(f"C'est votre premier fois vous devez d'abord donner un site a ouvrire. Demande utilisateur : {rps_utilisateur}")
+    print(f"Page ouvert : {rps_ia_ouverture_site.text}")
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False, slow_mo=500)
         page = browser.new_page()
+        ouvrire_site(rps_ia_ouverture_site.text)
 
-        url_ia = rps_ia.text.strip()
-        page.goto(url_ia)
-
-        while True:
-            if page.is_closed():
-                print("\n[Navigateur] Fenêtre fermée par l'utilisateur.")
-                break
-
-            if msvcrt.kbhit():
-                try:
-                    touche = msvcrt.getch().decode('utf-8')
-                    if touche.lower() == "q":
-                        browser.close()
-                        break
-                except UnicodeDecodeError:
-                    pass
-            
-            time.sleep(0.1)
+        complement_boucle()
