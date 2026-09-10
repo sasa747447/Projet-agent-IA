@@ -13,12 +13,16 @@ Voici les règles EXTRÊMEMENT IMPORTANTES à suivre à la lettre :
 - N'utilise JAMAIS de caractères jokers ou d'étoiles '*'.
 - Ne réponds QUE par la suite de commandes. Aucun texte explicatif, aucune intro, aucune politesse.
 - Éléments introuvables : Si un élément n'est pas dans le scan, n'invente rien. Exécute les actions visibles (pop-ups, menus) et attends le prochain tour où il apparaîtra.
+- Priorité : Utilise btn_class_id en preference . N'utilise btn_titre qu'en dernier recours.
+- Précision du texte : Pour btn_titre, tu dois copier le nom complet et exact du bouton ou lien tel qu'il apparaît dans le scan (ex: "Se connecter" et non "Se").
 
 SYNTAXES STRICTEMENT AUTORISÉES (N'en invente AUCUNE autre) :
   • lien + <url_complete>
   • btn_class_id + <selecteur_css> (ex: .ma-classe ou #mon-id)
   • btn_titre + <texte_du_bouton_ou_lien>
   • input + <selecteur_css> + <texte_a_ecrire>
+  • delay + <temps>
+  • end
 """
 
 dossier_config = Path(__file__).resolve().parent / "config"
@@ -150,14 +154,35 @@ def executer_commande(chaine_ia):
         parties = commande_separe.split('+')
         commande = parties[0].strip()
 
-        if commande == "lien":
-            if len(parties) > 1:
-                url = parties[1].strip()
-                page.goto(url)
+        try:
+            if commande == 'lien' and len(parties) > 1:
+                page.goto(parties[1].strip())
 
-        if commande == "btn_class_id":
-            if len(parties) > 1:
-                page.click(parties[1].strip())
+            elif commande == 'btn_class_id' and len(parties) > 1:
+                selecteur = parties[1].strip()
+                page.eval_on_selector(selecteur, "el => el.click()")
+
+            elif commande == 'btn_titre' and len(parties) > 1:
+                page.get_by_text(parties[1].strip(), exact=False).first.click()
+
+            elif commande == 'input' and len(parties) > 2:
+                page.fill(parties[1].strip(), parties[2].strip())
+
+            elif commande == 'delay' and len(parties) > 1:
+                time.sleep(float(parties[1].strip()))
+
+            elif commande == 'end':
+                global terminer_ia
+                terminer_ia = True
+                print("Fin du programme")
+                
+            print(f"[Succès] Action exécutée : {commande}")
+            
+        except Exception as e:
+            print(nic := f"[Attention] Impossible d'exécuter '{commande}' pour l'instant : {e}")
+            print("-> L'agent ignorera cette action et réessaiera au prochain tour.")
+
+        page.wait_for_timeout(1500)
 
 terminer_ia = False
 
@@ -181,7 +206,10 @@ while not terminer:
         ouvrire_site(rps_ia_ouverture_site.text)
 
         while not terminer_ia:
-            page.wait_for_load_state("networkidle")
+            try:
+                page.wait_for_load_state("networkidle", timeout=5000)
+            except Exception:
+                pass
             resultat_scan = scan_environement(page)
             print(resultat_scan + "\n")
 
