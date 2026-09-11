@@ -69,7 +69,9 @@ def créer_json():
     rps_api_key = saisie_dynamique("Entrez votre Api Key Gemini : ")
     donne_base_json = {
         "API_KEY" : rps_api_key,
-        "model_IA" : "models/gemini-3.5-flash-lite"
+        "model_IA" : "models/gemini-3.5-flash-lite",
+        "automatique" : False,
+        "DEV_MODE" : True
     }
     fichier_config.write_text(json.dumps(donne_base_json, indent=4), encoding="utf-8")
 
@@ -129,16 +131,78 @@ def scan_environement(page):
         return info.join('\\n');
     }""")
 
+terminer_admin = False
+
+def mode_admin():
+    global terminer_admin
+    while not terminer_admin:
+        clear()
+        print("Mode Admin (taper 'q' pour quitter)")
+        print("-"*30)
+        print(f"1 : {'Desactiver' if config.get('automatique') else 'Activer'} le mode automatique")
+        print(f"2 : {'Desactiver' if config.get('DEV_MODE') else 'Activer'} le DEV MODE")
+        print(f"3 : Changer le model d'IA        [ Actuelle : {config.get('model_IA')}]")
+        rps_admin = msvcrt.getch().decode('utf-8')
+
+        if rps_admin == '1':
+            clear()
+            print("1 : Activer")
+            print("2 : Desactiver")
+            rps_mode_automatique = msvcrt.getch().decode('utf-8')
+
+            if rps_mode_automatique == '1':
+                config['automatique'] == "True"
+            elif rps_mode_automatique == '2':
+                config['automatique'] == False
+
+            fichier_config.write_text(json.dumps(config, indent=4), encoding='utf-8')
+
+        elif rps_admin == '2':
+            clear()
+            print("1 : Activer")
+            print("2 : Desactiver")
+            rps_DEV_MODE = msvcrt.getch().decode('utf-8')
+            
+            if rps_DEV_MODE == '1':
+                config['DEV_MODE'] == "True"
+            elif rps_DEV_MODE == '2':
+                config['DEV_MODE'] == False
+
+            fichier_config.write_text(json.dumps(config, indent=4), encoding='utf-8')
+
+        elif rps_admin == '3':
+            clear()
+            model_dispo = {
+                "models/gemini-3.5-flash-lite": " 🚀 Ultra-rapide | Recommandé #1 (500 req/jour)",
+                "models/gemini-3.1-flash-lite": " 🚀 Instantané | Backup rapide (500 req/jour)",
+                "models/gemini-3.6-flash":       " 🧠 Top intelligence Flash (20 req/jour)",
+                "models/gemini-3.5-flash":       " 🎯 Précis pour dossiers complexes (20 req/jour)",
+                "models/gemini-3-flash":         " ⚡ Rapide et logique (20 req/jour)",
+                "models/gemini-2.5-flash":       " ⚡ Stable et rapide (20 req/jour)",
+                "models/gemini-2.5-flash-lite":  " 🚀 Léger / Réserve (20 req/jour)",
+                "models/gemini-3.1-pro":         " 🧠 Raisonnement avancé & Custom Tools",
+                "gemma-4-31b-it":                  " 💥 Modèle 31B puissant (14,4k req/jour)",
+                "gemma-4-26b-it":                  " 💥 Modèle 26B hyper rapide (14,4k req/jour)",
+            }
+
+            print(f"--- 🤖 MODÈLES DISPONIBLES --- [ Actuelle : {config.get('model_IA')} ]\n")
+            for i, m in enumerate(model_dispo, 1):
+                print(f"{i} : {m}")
+            choix_model_ia = saisie_dynamique("\nVotre choix (numéro) : ")
+
+            if choix_model_ia.isdigit() and 1 <= int(choix_model_ia) <= len(model_dispo):
+                config('model_IA') == model_dispo[int(choix_model_ia) - 1]
+                fichier_config.write_text(json.dumps(config, indent=4), encoding="utf-8")
+                print(f"\n[Succès] Modèle mis à jour : {config['model_IA']}")
+
+        elif rps_admin == 'q':
+            terminer_admin = True
+
+
 def ouvrire_site(chaine_ia):
     if chaine_ia.strip().startswith('lien+'):
         chaine_ia = chaine_ia.replace("lien+", "", 1)
     page.goto(chaine_ia)
-
-def executer_commande(chaine_ia):
-
-    if not chaine_ia or chaine_ia.strip() == "":
-        print("Aucune instruction à exécuter.")
-        return
 
 def executer_commande(chaine_ia):
     if not chaine_ia or chaine_ia.strip() == "":
@@ -173,12 +237,14 @@ def executer_commande(chaine_ia):
                 time.sleep(float(parties[1].strip()))
 
             if commande == "question" and len(parties) > 1:
-                winsound.PlaySound(1000, 500)
+                winsound.MessageBeep(winsound.MB_ICONERROR)
                 print(f"\n[Question de l'IA] : {parties[1].strip()}")
                 reponse_utilisateur = saisie_dynamique("Votre réponse : ")
                 chat.send_message(f"Réponse de l'utilisateur à votre question : {reponse_utilisateur}")
 
             elif commande == 'end':
+                print("Cliquer sur une touche pour continuer")
+                msvcrt.getch()
                 global terminer_ia
                 terminer_ia = True
                 print("Fin du programme")
@@ -197,6 +263,10 @@ while not terminer:
     clear()
     rps_utilisateur = saisie_dynamique("Que voulez vous faire")
 
+    if rps_utilisateur == "admin":
+        mode_admin()
+        continue
+
     if not rps_utilisateur or rps_utilisateur.strip() == "":
         continue
 
@@ -205,11 +275,19 @@ while not terminer:
         break
 
     rps_ia_ouverture_site = chat.send_message(f"C'est la première fois. Demande utilisateur : {rps_utilisateur}. Rappelle-toi : donne UNIQUEMENT la commande lien+URL, rien d'autre.")
-    print(f"Page ouvert : {rps_ia_ouverture_site.text}")
+    print(f"Page ouvert : {rps_ia_ouverture_site.text}")  if config.get('DEV_MODE') else ""
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False, slow_mo=500)
-        page = browser.new_page()
+        browser = p.chromium.launch(
+            headless=False, 
+            slow_mo=500,
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--disable-infobars"
+            ]
+            )
+        page = browser.new_page(viewport=None)
+        page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         ouvrire_site(rps_ia_ouverture_site.text)
 
         while not terminer_ia:
@@ -218,12 +296,13 @@ while not terminer:
             except Exception:
                 pass
             resultat_scan = scan_environement(page)
-            print(resultat_scan + "\n")
+            print(resultat_scan + "\n")  if config.get('DEV_MODE') else ""
 
             rps_scan_ia = chat.send_message("Scan complet : " + resultat_scan + ". Demande utilisateur" + rps_utilisateur)
-            print(rps_scan_ia.text)
+            print(rps_scan_ia.text)  if config.get('DEV_MODE') else ""
 
             executer_commande(rps_scan_ia.text)
 
-            print("Cliquer sur une touche pour continuer")
-            msvcrt.getch()
+            if config.get('automatique'):
+                print("Cliquer sur une touche pour continuer")
+                msvcrt.getch()
