@@ -1,4 +1,4 @@
-import os, sys, time, msvcrt, json, shutil
+import os, sys, time, msvcrt, json, shutil, winsound
 from playwright.sync_api import sync_playwright
 from pathlib import Path
 from google import genai
@@ -22,6 +22,7 @@ SYNTAXES STRICTEMENT AUTORISÉES (N'en invente AUCUNE autre) :
   • btn_titre + <texte_du_bouton_ou_lien>
   • input + <selecteur_css> + <texte_a_ecrire>
   • delay + <temps>
+  • question + <texte_a_poser_a_l_utilisateur>
   • end
 """
 
@@ -170,6 +171,12 @@ def executer_commande(chaine_ia):
 
             elif commande == 'delay' and len(parties) > 1:
                 time.sleep(float(parties[1].strip()))
+
+            if commande == "question" and len(parties) > 1:
+                winsound.PlaySound(1000, 500)
+                print(f"\n[Question de l'IA] : {parties[1].strip()}")
+                reponse_utilisateur = saisie_dynamique("Votre réponse : ")
+                chat.send_message(f"Réponse de l'utilisateur à votre question : {reponse_utilisateur}")
 
             elif commande == 'end':
                 global terminer_ia
