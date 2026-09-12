@@ -43,28 +43,32 @@ Projet-agent-IA/
 
 **Fonctionnement du programme**
 
-* **1.** Si le dossier config existe alors le programme verifie si le fichier config.json existe dedans
+* **1.** Le dossier Config est vérifié, puis le programme s'assure que le fichier config.json y est présent.
 
-* **2.** Si le fichier n'existe pas alors il vous demandera votre clé d'API Gemini qui est obligatoire pour le fonctionnement
+* **2.** Si le fichier est manquant, le programme demande de saisir votre clé d'API Gemini, qui est obligatoire.
 
-* **3.** Ensuite le programme vous demande quoi faire
+* **3.** Le programme vous invite ensuite à saisir votre consigne initiale.
 
-* **4.** Vous donner votre reponse puis une premier requete est envoyer a l'IA pour ouvrir un site internet
+* **4.** Votre réponse est prise en compte, et une première requête est envoyée à l'IA pour ouvrir le site internet.
 
-* **5.** Un scan complet de la page est effectuer, il permet de ressortir tout le text, bouton, et inpt pour le transformer en forme de texte
+* **5.** Un scan complet de la page est effectué pour extraire tous les textes, boutons et champs (input) sous forme textuelle.
 
-* **6.** Une 2ème requette est alors envoyer a l'ia avec le scan complet de la page
+* **6.** Une seconde requête est alors envoyée à l'IA en lui transmettant ce scan complet
+  
+* **7.** L'IA renvoie une série de commandes, par exemple : `lien+google.com | btn_id_class+btn_valider.`
 
-* **7.** L'IA renvoye alors une commande, exemple : `lien+google.com | btn_id_class+btn_valider`
+* **8.** Le programme analyse la chaîne de caractères pour la découper en plusieurs parties à l'aide du séparateur |.
 
-* **8.** Le programme analyse la commande pour les separer en plusieurs partie a partir du '|'
+* **9.** Une boucle `for` analyse chaque partie de la commande pour préparer son exécution.
 
-* **9.** Une boucle `for` va alors regarder chaque patries de commande pour les executer
+* **10.** `Playwright` entre en action pour cliquer, remplir ou exécuter les commandes sur la page.
+  
+* **11.** La boucle recommence à partir du scan de la page.
 
-* **10.** enfin `playwright` va alors cliquer / remplir, executer les commandes
 
-* **11.** La boucle recommence a partir du scan
-
+**Installation :**
 ```bash
 git clone https://github.com/sasa747447/Projet-agent-IA.git
+cd Projet-agent-IA
+python Projet-agent-IA.py
 ```
