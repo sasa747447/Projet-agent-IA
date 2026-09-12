@@ -28,7 +28,6 @@ SYNTAXES STRICTEMENT AUTORISÉES (NTERDICTION STRICTE d'inventer un autre nom de
   • lien + <url_complete>
   • btn_class_id + <selecteur_css> (ex: .ma-classe ou #mon-id)
   • input + <selecteur_css> + <texte_a_ecrire>
-  • delay + <temps>
   • question + <texte_a_poser_a_l_utilisateur>
   • end
 """
@@ -271,9 +270,6 @@ def executer_commande(chaine_ia):
             elif commande == 'input' and len(parties) > 2:
                 page.fill(parties[1].strip(), parties[2].strip())
 
-            elif commande == 'delay' and len(parties) > 1:
-                time.sleep(float(parties[1].strip()))
-
             if commande == "question" and len(parties) > 1:
                 winsound.MessageBeep(winsound.MB_ICONERROR)
                 print(f"\n[Question de l'IA] : {parties[1].strip()}")
@@ -285,11 +281,20 @@ def executer_commande(chaine_ia):
                     send_message_ollama(f"Réponse de l'utilisateur à votre question : {reponse_utilisateur}")
 
             elif commande == 'end':
-                print("Cliquer sur une touche pour continuer")
-                msvcrt.getch()
-                global terminer_ia
-                terminer_ia = True
-                print("Fin du programme")
+                winsound.MessageBeep(winsound.MB_ICONINFORMATION)
+                print(f"\n[Fin de tâche / IA] : Est-ce que c'est fini ou voulez-vous autre chose ?")
+                reponse_utilisateur = saisie_dynamique("Votre réponse : ")
+
+                if reponse_utilisateur.lower().strip() in ["o", "oui", "fin", "c'est bon", "stop", "quitter", "fini"]:
+                    global terminer_ia
+                    terminer_ia = True
+                    print("Fin du programme")
+                else:
+                    msg_suivi = f"L'utilisateur souhaite continuer avec cette consigne : {reponse_utilisateur}"
+                    if config.get('IA_LOCAL_LIGNE') == "LIGNE":
+                        chat_gemini.send_message(msg_suivi)
+                    elif config.get('IA_LOCAL_LIGNE') == "LOCAL":
+                        send_message_ollama(msg_suivi)
                 
             print(f"[Succès] Action exécutée : {commande}")
             
