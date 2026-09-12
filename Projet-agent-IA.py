@@ -1,30 +1,39 @@
-import os, sys, time, msvcrt, json, shutil, winsound
+import os, sys, time, msvcrt, json, shutil, winsound, subprocess
 from playwright.sync_api import sync_playwright
 from pathlib import Path
 from google import genai
+import ollama as ol
 
 INSTRUCTION_IA = """
-Tu es un assistant IA personnel agissant comme un agent d'automatisation web (Playwright).
-Voici les règles EXTRÊMEMENT IMPORTANTES à suivre à la lettre :
-- Pour ton TOUT PREMIER message, tu dois UNIQUEMENT renvoyer la commande 'lien' avec l'URL (ex: lien+https://www.google.com). INTERDICTION absolue de mettre un symbole '|' ou d'autres commandes au premier tour.
-- Pour les tours suivants (après avoir vu le scan), utilise les autres commandes.
-- Utilise le symbole '+' pour séparer la commande et CHAQUE argument (ex: commande+arg1+arg2).
-- Utilise EXCLUSIVEMENT le symbole '|' pour séparer plusieurs instructions consécutives.
-- N'utilise JAMAIS de caractères jokers ou d'étoiles '*'.
-- Ne réponds QUE par la suite de commandes. Aucun texte explicatif, aucune intro, aucune politesse.
-- Éléments introuvables : Si un élément n'est pas dans le scan, n'invente rien. Exécute les actions visibles (pop-ups, menus) et attends le prochain tour où il apparaîtra.
-- Priorité : Utilise btn_class_id en preference . N'utilise btn_titre qu'en dernier recours.
-- Précision du texte : Pour btn_titre, tu dois copier le nom complet et exact du bouton ou lien tel qu'il apparaît dans le scan (ex: "Se connecter" et non "Se").
+Tu es un assistant IA personnel agissant comme un agent d'automatisation web (Playwright). Tu réponds UNIQUEMENT par une commande, sans aucun texte explicatif, intro ou politesse.
 
-SYNTAXES STRICTEMENT AUTORISÉES (N'en invente AUCUNE autre) :
+RÈGLES D'EXÉCUTION :
+1. PREMIER TOUR : Renvoie UNIQUEMENT 'lien+URL' (ex: lien+https://www.google.com). INTERDICTION absolue d'utiliser le symbole '|' ou d'autres commandes au premier tour.
+2. TOURS SUIVANTS : Utilise les autres commandes selon le scan de la page.
+3. SYNTAXE : Utilise '+' pour séparer la commande et CHAQUE argument (ex: commande+arg1+arg2). N'utilise JAMAIS d'étoiles '*' ou de caractères jokers.
+4. ÉLÉMENTS INTROUVABLES : N'invente rien. Si un élément n'est pas dans le scan, gère ce qui est visible (pop-ups, cookies) ou attends.
+5. Si on te demand d'accepter les cookie ou autre dis toujours OUI en cliquant sur le bouton
+6. Si le sélecteur ou l'élément demandé n'apparaît pas dans le texte du scan actuel, tu n'as pas le droit de l'utiliser.
+
+RÈGLE ANTI-BOUCLE & LIENS :
+- Si l'URL actuelle du navigateur commence par 'http' (la page est déjà ouverte), tu as STRICTEMENT INTERDICTION d'utiliser la commande 'lien'. Passe directement à l'action suivante (ex: cliquer sur les cookies).
+
+OBÉISSANCE ET SÉCURITÉ :
+- Interdiction formelle de "faire ta vie" ou d'inventer des actions hors sujet.
+- EN CAS DE DOUTE : Si tu hésites, si un élément est ambigu, ou si la page d'accueil/recherche est atteinte sans consigne précise, tu as l'OBLIGATION d'utiliser la commande 'question' (ex: question+Que dois-je chercher ?). Ne tape jamais du texte au hasard dans les champs.
+- Si tu as des question pour paar exemple quoi chrcehr une adress mail mot de passe etc alors tu peut demander avec input+<ce que tu veut>
+- Exemple valide : btn_class_id+#gb_6 | delay+2000 | input+.gb_Aa+MonTexte
+
+SYNTAXES STRICTEMENT AUTORISÉES (NTERDICTION STRICTE d'inventer un autre nom de commande) :
   • lien + <url_complete>
   • btn_class_id + <selecteur_css> (ex: .ma-classe ou #mon-id)
-  • btn_titre + <texte_du_bouton_ou_lien>
   • input + <selecteur_css> + <texte_a_ecrire>
   • delay + <temps>
   • question + <texte_a_poser_a_l_utilisateur>
   • end
 """
+
+MODEL_NOM_OLLAMA = "qwen2.5:7b-instruct"
 
 dossier_config = Path(__file__).resolve().parent / "config"
 fichier_config = dossier_config / "config.json"
@@ -71,7 +80,8 @@ def créer_json():
         "API_KEY" : rps_api_key,
         "model_IA" : "models/gemini-3.5-flash-lite",
         "automatique" : False,
-        "DEV_MODE" : True
+        "DEV_MODE" : True,
+        "IA_LOCAL_LIGNE": "LIGNE"
     }
     fichier_config.write_text(json.dumps(donne_base_json, indent=4), encoding="utf-8")
 
@@ -92,7 +102,7 @@ except Exception:
     client = None
 
 if client:
-    chat = client.chats.create(
+    chat_gemini = client.chats.create(
     model=config.get('model_IA'),
     config={"system_instruction": INSTRUCTION_IA}
 )
@@ -131,6 +141,30 @@ def scan_environement(page):
         return info.join('\\n');
     }""")
 
+_memoire_ollama = []
+
+_memoire_ollama = []
+
+def send_message_ollama(texte):
+    global _memoire_ollama
+
+    _memoire_ollama.append({"role": "user", "content": texte})
+
+    messages = [{"role": "system", "content": INSTRUCTION_IA}] + _memoire_ollama
+
+    try:
+        response = ol.chat(model=MODEL_NOM_OLLAMA, messages=messages)
+    except Exception:
+        subprocess.Popen(['ollama', 'serve'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        time.sleep(3)
+        response = ol.chat(model=MODEL_NOM_OLLAMA, messages=messages)
+
+    reponse_content = response['message']['content']
+
+    _memoire_ollama.append({"role": "assistant", "content": reponse_content})
+
+    return reponse_content
+
 terminer_admin = False
 
 def mode_admin():
@@ -151,9 +185,9 @@ def mode_admin():
             rps_mode_automatique = msvcrt.getch().decode('utf-8')
 
             if rps_mode_automatique == '1':
-                config['automatique'] == "True"
+                config['automatique'] = True
             elif rps_mode_automatique == '2':
-                config['automatique'] == False
+                config['automatique'] = False
 
             fichier_config.write_text(json.dumps(config, indent=4), encoding='utf-8')
 
@@ -164,9 +198,9 @@ def mode_admin():
             rps_DEV_MODE = msvcrt.getch().decode('utf-8')
             
             if rps_DEV_MODE == '1':
-                config['DEV_MODE'] == "True"
+                config['DEV_MODE'] = True
             elif rps_DEV_MODE == '2':
-                config['DEV_MODE'] == False
+                config['DEV_MODE'] = False
 
             fichier_config.write_text(json.dumps(config, indent=4), encoding='utf-8')
 
@@ -191,7 +225,7 @@ def mode_admin():
             choix_model_ia = saisie_dynamique("\nVotre choix (numéro) : ")
 
             if choix_model_ia.isdigit() and 1 <= int(choix_model_ia) <= len(model_dispo):
-                config('model_IA') == model_dispo[int(choix_model_ia) - 1]
+                config['model_IA'] == model_dispo[int(choix_model_ia) - 1]
                 fichier_config.write_text(json.dumps(config, indent=4), encoding="utf-8")
                 print(f"\n[Succès] Modèle mis à jour : {config['model_IA']}")
 
@@ -199,10 +233,17 @@ def mode_admin():
             terminer_admin = True
 
 
-def ouvrire_site(chaine_ia):
-    if chaine_ia.strip().startswith('lien+'):
-        chaine_ia = chaine_ia.replace("lien+", "", 1)
-    page.goto(chaine_ia)
+def ouvrire_site(chaine_ia, page_obj):
+    chaine_ia = chaine_ia.strip()
+    if chaine_ia.startswith('lien+'):
+        chaine_ia = chaine_ia.replace("lien+", "", 1).strip()
+    elif chaine_ia.startswith('lien '):
+        chaine_ia = chaine_ia.replace("lien ", "", 1).strip()
+
+    if not chaine_ia.startswith('http'):
+        chaine_ia = f"https://{chaine_ia}"
+        
+    page_obj.goto(chaine_ia)
 
 def executer_commande(chaine_ia):
     if not chaine_ia or chaine_ia.strip() == "":
@@ -227,9 +268,6 @@ def executer_commande(chaine_ia):
                 selecteur = parties[1].strip()
                 page.eval_on_selector(selecteur, "el => el.click()")
 
-            elif commande == 'btn_titre' and len(parties) > 1:
-                page.get_by_text(parties[1].strip(), exact=False).first.click()
-
             elif commande == 'input' and len(parties) > 2:
                 page.fill(parties[1].strip(), parties[2].strip())
 
@@ -240,7 +278,11 @@ def executer_commande(chaine_ia):
                 winsound.MessageBeep(winsound.MB_ICONERROR)
                 print(f"\n[Question de l'IA] : {parties[1].strip()}")
                 reponse_utilisateur = saisie_dynamique("Votre réponse : ")
-                chat.send_message(f"Réponse de l'utilisateur à votre question : {reponse_utilisateur}")
+
+                if config.get('IA_LOCAL_LIGNE') == "LIGNE":
+                    chat_gemini.send_message(f"Réponse de l'utilisateur à votre question : {reponse_utilisateur}")
+                elif config.get('IA_LOCAL_LIGNE') == "LOCAL":
+                    send_message_ollama(f"Réponse de l'utilisateur à votre question : {reponse_utilisateur}")
 
             elif commande == 'end':
                 print("Cliquer sur une touche pour continuer")
@@ -274,8 +316,14 @@ while not terminer:
         print("Fermeture du programme...")
         break
 
-    rps_ia_ouverture_site = chat.send_message(f"C'est la première fois. Demande utilisateur : {rps_utilisateur}. Rappelle-toi : donne UNIQUEMENT la commande lien+URL, rien d'autre.")
-    print(f"Page ouvert : {rps_ia_ouverture_site.text}")  if config.get('DEV_MODE') else ""
+    terminer_ia = False
+
+    if config.get("IA_LOCAL_LIGNE") == "LIGNE":
+        rps_ia_ouverture_site = chat_gemini.send_message(f"C'est la première fois. Demande utilisateur : {rps_utilisateur}. Rappelle-toi : donne UNIQUEMENT la commande lien+URL, rien d'autre.")
+    elif config.get('IA_LOCAL_LIGNE') == "LOCAL":
+        rps_ia_ouverture_site = send_message_ollama(f"C'est la première fois. Demande utilisateur : {rps_utilisateur}. Rappelle-toi : donne UNIQUEMENT la commande lien+URL, rien d'autre.")
+
+    print(f"Page ouvert : {rps_ia_ouverture_site.text if config.get('IA_LOCAL_LIGNE') == 'LIGNE' else rps_ia_ouverture_site}") if config.get('DEV_MODE') else None
 
     with sync_playwright() as p:
         browser = p.chromium.launch(
@@ -288,7 +336,7 @@ while not terminer:
             )
         page = browser.new_page(viewport=None)
         page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-        ouvrire_site(rps_ia_ouverture_site.text)
+        ouvrire_site(rps_ia_ouverture_site.text if config.get('IA_LOCAL_LIGNE') == 'LIGNE' else rps_ia_ouverture_site, page)
 
         while not terminer_ia:
             try:
@@ -298,10 +346,14 @@ while not terminer:
             resultat_scan = scan_environement(page)
             print(resultat_scan + "\n")  if config.get('DEV_MODE') else ""
 
-            rps_scan_ia = chat.send_message("Scan complet : " + resultat_scan + ". Demande utilisateur" + rps_utilisateur)
-            print(rps_scan_ia.text)  if config.get('DEV_MODE') else ""
+            if config.get("IA_LOCAL_LIGNE") == "LIGNE":
+                rps_scan_ia = chat_gemini.send_message("Scan complet : " + resultat_scan + ". Demande utilisateur" + rps_utilisateur)
+            elif config.get('IA_LOCAL_LIGNE') == "LOCAL":
+                rps_scan_ia = send_message_ollama("Scan complet : " + resultat_scan + ". Demande utilisateur" + rps_utilisateur)
 
-            executer_commande(rps_scan_ia.text)
+            print(rps_scan_ia.text if config.get("IA_LOCAL_LIGNE") == "LIGNE" else rps_scan_ia)  if config.get('DEV_MODE') else ""
+
+            executer_commande(rps_scan_ia.text if config.get("IA_LOCAL_LIGNE") == "LIGNE" else rps_scan_ia)
 
             if config.get('automatique'):
                 print("Cliquer sur une touche pour continuer")
