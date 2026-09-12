@@ -2,12 +2,12 @@
 
 Agent IA autonome piloté par l'API Gemini, s'appuyant sur l'architecture du projet "Nettoyage IA".
 
-**Modes d'exécution**
+## Modes d'exécution
 * **Mode en ligne** : Piloté par Google Gemini pour l'analyse et l'envoi des commandes.
 
 * **Mode local** : Propulsé par Ollama avec le modèle 'qwen2.5:7b-instruct', spécialement choisi pour sa rapidité d'exécution des commandes.
 
-**Problématique actuelle**
+## Problématique actuelle
 Une difficulté est rencontrée avec le mode local :
 
 Le modèle a du mal à interpréter proprement les scans HTML transmis par le script Python.
@@ -18,7 +18,7 @@ Il ne déclenche jamais la commande question lorsqu'il est bloqué, contrairemen
 
 _Est-ce une limitation des capacités de raisonnement de ce modèle local par rapport à Gemini, ou un problème d'optimisation du prompt ?_
 
-**Module python requis :**
+## Module python requis :
 *  msvcrt
 *  json
 *  shutil
@@ -28,7 +28,7 @@ _Est-ce une limitation des capacités de raisonnement de ce modèle local par ra
 *  google
 *  ollama
 
-**Structure du projet Final**
+## Structure du projet Final
 ```text
 Projet-agent-IA/
 │
@@ -37,11 +37,11 @@ Projet-agent-IA/
     └── config.json
 ```
 
-**Information a savoir**
+## Information a savoir
 * **Panneau d'administration** : Tapez **`admin`** directement dans le terminal à la place d'une question pour l'IA pour accéder au panneau d'administration du programme.
 * L'IA pourra vous poser des questions afin de préciser ses prochaines actions.
 
-**Fonctionnement du programme**
+## Fonctionnement du programme
 
 * **1.** Le dossier Config est vérifié, puis le programme s'assure que le fichier config.json y est présent.
 
@@ -66,7 +66,7 @@ Projet-agent-IA/
 * **11.** La boucle recommence à partir du scan de la page.
 
 
-**Installation :**
+## Installation :
 ```bash
 git clone https://github.com/sasa747447/Projet-agent-IA.git
 cd Projet-agent-IA
