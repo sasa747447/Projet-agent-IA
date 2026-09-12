@@ -3,9 +3,9 @@
 Agent IA autonome piloté par l'API Gemini, s'appuyant sur l'architecture du projet "Nettoyage IA".
 
 **Modes d'exécution**
-• **Mode en ligne** : Piloté par Google Gemini pour l'analyse et l'envoi des commandes.
+* **Mode en ligne** : Piloté par Google Gemini pour l'analyse et l'envoi des commandes.
 
-• **Mode local** : Propulsé par Ollama avec le modèle 'qwen2.5:7b-instruct', spécialement choisi pour sa rapidité d'exécution des commandes.
+* **Mode local** : Propulsé par Ollama avec le modèle 'qwen2.5:7b-instruct', spécialement choisi pour sa rapidité d'exécution des commandes.
 
 **Problématique actuelle**
 Une difficulté est rencontrée avec le mode local :
@@ -27,6 +27,15 @@ _Est-ce une limitation des capacités de raisonnement de ce modèle local par ra
 *  pathlib
 *  google
 *  ollama
+
+**Structure du projet Final**
+```text
+Projet-agent-IA/
+│
+├── Projet-agent-IA.py
+└── Config/
+    └── config.json
+```
 
 ```bash
 git clone https://github.com/sasa747447/Projet-agent-IA.git
