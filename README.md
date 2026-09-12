@@ -1,4 +1,4 @@
-**Projet Agent IA Autonome**
+#**Projet Agent IA Autonome**
 
 Agent IA autonome piloté par l'API Gemini, s'appuyant sur l'architecture du projet "Nettoyage IA".
 
