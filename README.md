@@ -19,14 +19,14 @@ Il ne déclenche jamais la commande question lorsqu'il est bloqué, contrairemen
 _Est-ce une limitation des capacités de raisonnement de ce modèle local par rapport à Gemini, ou un problème d'optimisation du prompt ?_
 
 **Module python requis :**
-  • msvcrt
-  • json
-  • shutil
-  • subprocess
-  • playwright
-  • pathlib
-  • google
-  • ollama
+*  msvcrt
+*  json
+*  shutil
+*  subprocess
+*  playwright
+*  pathlib
+*  google
+*  ollama
 
 ```bash
 git clone https://github.com/sasa747447/Projet-agent-IA.git
