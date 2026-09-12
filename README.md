@@ -37,6 +37,10 @@ Projet-agent-IA/
     └── config.json
 ```
 
+**Information a savoir**
+* **Panneau d'administration** : Tapez **`admin`** directement dans le terminal à la place d'une question pour l'IA pour accéder au panneau d'administration du programme.
+* L'IA pourra vous poser des questions afin de préciser ses prochaines actions.
+
 ```bash
 git clone https://github.com/sasa747447/Projet-agent-IA.git
 ```
