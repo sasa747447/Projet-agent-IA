@@ -2,6 +2,15 @@
 
 Agent IA autonome piloté par l'API Gemini, s'appuyant sur l'architecture du projet "Nettoyage IA".
 
+## Sommaire
+- [Modes d'exécution](#modes-dexécution)
+- [Problématique actuelle](#problématique-actuelle)
+- [Modules Python requis](#modules-python-requis)
+- [Structure du projet](#structure-du-projet)
+- [Informations à savoir](#informations-à-savoir)
+- [Fonctionnement du programme](#fonctionnement-du-programme)
+- [Installation](#installation)
+
 ## Modes d'exécution
 * **Mode en ligne** : Piloté par Google Gemini pour l'analyse et l'envoi des commandes.
 
